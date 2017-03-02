@@ -1,0 +1,173 @@
+LFS liveCD°²×°ÊÖÔý
+
+
+Ïëžãlfs£¬Ç°±²ËµÓÃlfsµÄlivecd×öËÞÖ÷±ÈœÏÈÝÒ×³É¹Š£¬ÕÛÌÚÁËÒ»žöÏÂÎç£¬ÖÕÓÚ°Ñlivecd°áµœÓ²ÅÌÉÏ¡£ŽË°²×°·œ·šliunxœ«ºÍwindows¹¹œšºÍÐ³µÄŒÒÔ°£¬windowsµÄosloaderÍê³ÉÒýµŒlinuxµÄstage1£¬stage2ÓÉgrubœÓÊÖ¡£livecdµÄÏÂÔØµØÖ·ÊÇ£º
+
+http://www.linuxfromscratch.org/livecd/download.html
+
+ÏÂÃæÊÇÁ÷Ë®ÕË£¬ºÙºÙ£º
+
+1. ÓÃlivecdÒýµŒÏµÍ³£¬œøÈëshell
+
+2. ÓÃcfdisk·Ö³öÈýžö·ÖÇø
+
+3. ÓÃmkfs.ext /dev/hda6   Õâžö·ÖÇøÓÃÀŽœ«ÓÃÀŽ·ÅÖÃlfs lived
+
+4. mkswap /dev/hda8 hda8œ«³ÉÎªœ»»»·ÖÇø
+
+5. œšÁ¢Ä¿ÂŒ£¬¹ÒÔØ¹âÅÌ¡¢¹ÒÔØhda6
+mkdir /mnt/{disk,cd}
+mount /dev/hda6 /mnt/disk
+mount /dev/lfs-cd /mnt/cd
+
+6.œ«¹âÅÌÀïµÄ¶«¶«¿œ±Žµœhda6
+/bin/cp -rf /mnt/cd/* /mnt/disk
+cd /mnt/disk
+rm drivers
+/bin/cp -rf /dev/shm/.cdrom/drivers .
+rm lfs-sources
+/bin/cp -rf /dev/shm/.cdrom/lfs-sources .
+
+7. ±àÒëÄÚºË
+cd /mnt/disk/usr/src
+cp /mnt/disk/lfs-sources/linux-2.6.22.5.tar.bz2 .
+tar jxvf linux-2.6.22.5.tar.bz2
+cd linux-2.6.22.5
+make menuconfig
+Ñ¡ÔñºÃcpu£¬žÉµôipv6£¬Ñ¡Ôñexit
+make 
+make modules_install
+
+8. °²×°grubºÍÄÚºË
+mkdir /mnt/disk/boot
+cd /mnt/disk/boot
+cp /mtn/disk/usr/src/linux-2.6.22.5/arch/i386/boot/bzImage .
+mkdir grub
+cp /mnt/disk/usr/lib/grub/i386-pc/stage{1,2} grub/
+grub
+ÔÚgrub¿ØÖÆÌšÊäÈë
+root (hd0,5)
+setup (hd0,5)
+œ«grub°²×°µœhda6ÉÏ
+vi grub/menu.lst
+ÐŽÈËÒÔÏÂÄÚÈÝ
+
+title LFS
+root (hd0,5)
+kernel /boot/linux root=/dev/hda6 rw vga=791
+
+9.»ñÈ¡hda6ÉÏgrubµÄÒýµŒ¿é£¬¹©M$µÄosloaderÊ¹ÓÃ
+ÒòÎªwindwosµÄŽÅÅÌµÄntfsµÄ£¬ÄÚºË²»ÈÏ¹Ò²»ÁË£¬»¹ºÃ£¬ÔÛÓÐuÅÌ£¬²åÈëUÅÌ
+ÍÐlivecdµÄºéž££¬ÄÜÈÏ³öÀŽ¡£
+
+dd bs=512 count=1 if=/dev/hda6 of=/dev/sda1/lfs.bin
+10. »Øµœwindows£¬¿œ±ŽuÅÌÖÐµÄlfs.binµœcÅÌžùÄ¿ÂŒ£¬ÔÚc:\boot.iniÖÐŒÓÈëÕâŸä»°
+c:\lfs.bin=LFS
+ÖØÆôµçÄÔ£¬»áÏÈœøÈëwindows loaerµÄœçÃæ£¬Ñ¡Ôñ¡°LFS¡±œøÈëgrubµÄstage2£¬ÓÉgrubÀŽÒýµŒlinux
+11. ŽòÉšÒ»ÏÂÏµÍ³
+passwd root
+vi /etc/inittab
+×¢ÊÍµô
+sd:06:once:/usr/bin/shutdown-helper
+ÕâÐÐ
+œ«
+1:2345:respawn:/bin/openvt -f -c 3 -e -w -- /usr/bin/livecd-login
+2:2345:respawn:/bin/openvt -f -c 3 -e -w -- /usr/bin/livecd-login
+3:2345:respawn:/bin/openvt -f -c 3 -e -w -- /usr/bin/livecd-login
+4:2345:respawn:/bin/openvt -f -c 4 -e -w -- /usr/bin/livecd-login
+5:2345:respawn:/bin/openvt -f -c 5 -e -w -- /usr/bin/livecd-login
+6:2345:respawn:/bin/openvt -f -c 6 -e -w -- /usr/bin/livecd-login
+ÐÞžÄÎª£º
+1:2345:respawn:/sbin/agetty tty1 9600
+2:2345:respawn:/sbin/agetty tty2 9600
+3:2345:respawn:/sbin/agetty tty3 9600
+4:2345:respawn:/sbin/agetty tty4 9600
+5:2345:respawn:/sbin/agetty tty5 9600
+6:2345:respawn:/sbin/agetty tty6 9600
+ÉŸ³ýÆô¶¯Ê±µÄÊ±ÇøºÍÓïÑÔÉèÖÃœÅ±Ÿ
+rm /etc/rc.d/rcsysinit.d/{S59clkconf,S69langconf}
+ÔÚ/etc/rc.d/init.d/ÏÂÌíŒÓÁœžöœÅ±ŸÈçÏÂ£º
+£š1£©halt
+#!/bin/sh
+#####################################
+# Bigin $rc_base/init.d/halt
+#
+#####################################
+. /etc/sysconfig/rc
+. ${rc_functions}
+case "${1}" in
+stop)
+halt -d -f -i -p
+;;
+*)
+echo "Usage: {stop}"
+exit 1
+;;
+esac
+# End $rc_base/init.d/halt
+(2)reboot
+#!/bin/sh
+###########################################
+# Begin $src_base/init.d/reboot
+#
+###########################################
+. /etc/sysconfig/rc
+. ${rc_functions}
+case "${1}" in
+stop)
+boot_mesg "Restarting system..."
+reboot -d -f -i
+;;
+*)
+echo "Usage: ${0} {stop}"
+exit 1
+;;
+esac
+# End $rc_base/init.d/reboot
+
+È»ºóÐÞžÄÕâÁœžöœÅ±ŸµÄÈšÏÞÎª754
+chmod 0754 /etc/rc.d/init.d/{halt,reboot}
+Îª0Œ¶±ðœšÁ¢¹Ø»ú
+cd /etc/rc.d/rc0.d
+ln -sv ../init.d/halt S99halt
+Îª6Œ¶±ðœšÁ¢ÖØÆô
+cd /etc/rc.d/rc6.d
+ln -sv ../init.d/reboot S99reboot
+14. ÐÞÕýŽÅÅÌ¹ÒœÓ±í
+vi /etc/fstab
+œ«
+/dev/mapper/lfs-cd / ext2 default 0 0
+ÐÞžÄÎª
+/dev/hda6 ext3 default 1 1
+15. ÅäÖÃÍøÂç
+cd /etc/sysconfig/network-devices/
+
+vi ifconfig.eth0
+
+œ«ÅäÖÃÎÄŒþÄÚÈÝÐÞžÄÎª
+
+ONBOOT=yes
+#SERVICE="dhcpcd"
+#DHCP_START="-t 20"
+#DHCP_STOP="-k"
+SERVICE=ipv4-static
+IP=192.168.0.8
+GATEWAY=192.168.0.1
+PREFIX=24
+BROADCAST=192.168.0.255
+
+wq±£³ÖÍÆ³ö£¬Æô¶¯Íø¿š
+
+./ifup eth0
+Æô¶¯sshd 
+
+/etc/rc.d/init.d/sshd start
+
+¿ÉÒÔœ«µçÄÔ¶ªÒ»±ß£¬ÓÃputtyÔ¶³Ì¿ØÖÆÁË£¬ºÙºÙ
+
+
+²Î¿Œ×ÊÁÏ£º
+http://tech.techweb.com.cn/viewthread.php?tid=187381
+
+
+±ŸÎÄÀŽ×ÔChinaUnix²©¿Í£¬Èç¹û²é¿ŽÔ­ÎÄÇëµã£ºhttp://blog.chinaunix.net/u/6140/showart_424786.html
