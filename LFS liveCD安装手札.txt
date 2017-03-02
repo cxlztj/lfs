@@ -1,0 +1,173 @@
+LFS liveCD安装手札
+
+
+想搞lfs，前辈说用lfs的livecd做宿主比较容易成功，折腾了一个下午，终于把livecd搬到硬盘上。此安装方法liunx将和windows构建和谐的家园，windows的osloader完成引导linux的stage1，stage2由grub接手。livecd的下载地址是：
+
+http://www.linuxfromscratch.org/livecd/download.html
+
+下面是流水账，嘿嘿：
+
+1. 用livecd引导系统，进入shell
+
+2. 用cfdisk分出三个分区
+
+3. 用mkfs.ext /dev/hda6   这个分区用来将用来放置lfs lived
+
+4. mkswap /dev/hda8 hda8将成为交换分区
+
+5. 建立目录，挂载光盘、挂载hda6
+mkdir /mnt/{disk,cd}
+mount /dev/hda6 /mnt/disk
+mount /dev/lfs-cd /mnt/cd
+
+6.将光盘里的东东拷贝到hda6
+/bin/cp -rf /mnt/cd/* /mnt/disk
+cd /mnt/disk
+rm drivers
+/bin/cp -rf /dev/shm/.cdrom/drivers .
+rm lfs-sources
+/bin/cp -rf /dev/shm/.cdrom/lfs-sources .
+
+7. 编译内核
+cd /mnt/disk/usr/src
+cp /mnt/disk/lfs-sources/linux-2.6.22.5.tar.bz2 .
+tar jxvf linux-2.6.22.5.tar.bz2
+cd linux-2.6.22.5
+make menuconfig
+选择好cpu，干掉ipv6，选择exit
+make 
+make modules_install
+
+8. 安装grub和内核
+mkdir /mnt/disk/boot
+cd /mnt/disk/boot
+cp /mtn/disk/usr/src/linux-2.6.22.5/arch/i386/boot/bzImage .
+mkdir grub
+cp /mnt/disk/usr/lib/grub/i386-pc/stage{1,2} grub/
+grub
+在grub控制台输入
+root (hd0,5)
+setup (hd0,5)
+将grub安装到hda6上
+vi grub/menu.lst
+写人以下内容
+
+title LFS
+root (hd0,5)
+kernel /boot/linux root=/dev/hda6 rw vga=791
+
+9.获取hda6上grub的引导块，供M$的osloader使用
+因为windwos的磁盘的ntfs的，内核不认挂不了，还好，咱有u盘，插入U盘
+托livecd的洪福，能认出来。
+
+dd bs=512 count=1 if=/dev/hda6 of=/dev/sda1/lfs.bin
+10. 回到windows，拷贝u盘中的lfs.bin到c盘根目录，在c:\boot.ini中加入这句话
+c:\lfs.bin=LFS
+重启电脑，会先进入windows loaer的界面，选择“LFS”进入grub的stage2，由grub来引导linux
+11. 打扫一下系统
+passwd root
+vi /etc/inittab
+注释掉
+sd:06:once:/usr/bin/shutdown-helper
+这行
+将
+1:2345:respawn:/bin/openvt -f -c 3 -e -w -- /usr/bin/livecd-login
+2:2345:respawn:/bin/openvt -f -c 3 -e -w -- /usr/bin/livecd-login
+3:2345:respawn:/bin/openvt -f -c 3 -e -w -- /usr/bin/livecd-login
+4:2345:respawn:/bin/openvt -f -c 4 -e -w -- /usr/bin/livecd-login
+5:2345:respawn:/bin/openvt -f -c 5 -e -w -- /usr/bin/livecd-login
+6:2345:respawn:/bin/openvt -f -c 6 -e -w -- /usr/bin/livecd-login
+修改为：
+1:2345:respawn:/sbin/agetty tty1 9600
+2:2345:respawn:/sbin/agetty tty2 9600
+3:2345:respawn:/sbin/agetty tty3 9600
+4:2345:respawn:/sbin/agetty tty4 9600
+5:2345:respawn:/sbin/agetty tty5 9600
+6:2345:respawn:/sbin/agetty tty6 9600
+删除启动时的时区和语言设置脚本
+rm /etc/rc.d/rcsysinit.d/{S59clkconf,S69langconf}
+在/etc/rc.d/init.d/下添加两个脚本如下：
+（1）halt
+#!/bin/sh
+#####################################
+# Bigin $rc_base/init.d/halt
+#
+#####################################
+. /etc/sysconfig/rc
+. ${rc_functions}
+case "${1}" in
+stop)
+halt -d -f -i -p
+;;
+*)
+echo "Usage: {stop}"
+exit 1
+;;
+esac
+# End $rc_base/init.d/halt
+(2)reboot
+#!/bin/sh
+###########################################
+# Begin $src_base/init.d/reboot
+#
+###########################################
+. /etc/sysconfig/rc
+. ${rc_functions}
+case "${1}" in
+stop)
+boot_mesg "Restarting system..."
+reboot -d -f -i
+;;
+*)
+echo "Usage: ${0} {stop}"
+exit 1
+;;
+esac
+# End $rc_base/init.d/reboot
+
+然后修改这两个脚本的权限为754
+chmod 0754 /etc/rc.d/init.d/{halt,reboot}
+为0级别建立关机
+cd /etc/rc.d/rc0.d
+ln -sv ../init.d/halt S99halt
+为6级别建立重启
+cd /etc/rc.d/rc6.d
+ln -sv ../init.d/reboot S99reboot
+14. 修正磁盘挂接表
+vi /etc/fstab
+将
+/dev/mapper/lfs-cd / ext2 default 0 0
+修改为
+/dev/hda6 ext3 default 1 1
+15. 配置网络
+cd /etc/sysconfig/network-devices/
+
+vi ifconfig.eth0
+
+将配置文件内容修改为
+
+ONBOOT=yes
+#SERVICE="dhcpcd"
+#DHCP_START="-t 20"
+#DHCP_STOP="-k"
+SERVICE=ipv4-static
+IP=192.168.0.8
+GATEWAY=192.168.0.1
+PREFIX=24
+BROADCAST=192.168.0.255
+
+wq保持推出，启动网卡
+
+./ifup eth0
+启动sshd 
+
+/etc/rc.d/init.d/sshd start
+
+可以将电脑丢一边，用putty远程控制了，嘿嘿
+
+
+参考资料：
+http://tech.techweb.com.cn/viewthread.php?tid=187381
+
+
+本文来自ChinaUnix博客，如果查看原文请点：http://blog.chinaunix.net/u/6140/showart_424786.html
